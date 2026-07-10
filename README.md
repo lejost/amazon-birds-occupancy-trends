@@ -1,20 +1,26 @@
-# BirdNetOccDyn 🐦📊
+# BirdNetOccDyn 🐦
 
 This project is composed by R scripts, functions and R Markdown / Quarto documents for the analysis of Amazon bird population dynamics, from raw BirdNET vocalization detections all the way to publication-ready trend tables and figures.
 
 As an undergraduate researcher (Statistics) at the [Ferraz Population Biology Lab (UFRGS)](http://ferrazlab.org/), I work on the data-preparation, analysis, interpretation and reporting stages of the project. The core Bayesian hierarchical occupancy models (scripts `4` to `7` in the `Scripts` folder) were written by Dr. Gonçalo Ferraz — **everything else in this repository is my own work, developed under Ferraz's guidance.**
 
-The goal of the project is to describe how Amazon bird communities change over time and to compare **old growth (OG)** and **secondary forest (SF)**, using the outputs of a **Bayesian hierarchical multi-species dynamic occupancy model**. The model estimates, for each of the surveyed bird species, the probabilities of initial presence (ψ₁), persistence (φ), colonization (γ) and detection (pp), and lets us track how these change across five years (2010–2014). Two automated audio-processing engines are compared throughout: **BirdNET** (deep-learning based) and **PROTAX-Sound**.
+The goal of the project is to describe how Amazon bird populations respond to the impacts of forest degradation over
+time, comparing old-growth (OG) and secondary forest (SF) — where old-growth is forest that has always retained its
+original structure, and secondary forest is one that has regrown after being cleared. This is done using the
+outputs of a Bayesian hierarchical multi-species dynamic occupancy model. The model estimates, for each of the
+surveyed bird species, the probabilities of initial presence (ψ₁), persistence (φ), colonization (γ) and detection
+(pp), and lets us track how these change across five years (2010–2014). Two automated audio-processing engines are
+compared throughout: BirdNET (deep-learning based) and PROTAX-Sound.
 
 ## Workflow
 
 The scripts are numbered to enforce the execution order. The pipeline goes from raw detections to results in three stages:
 
-**Stage 1 — Data preparation (mine, scripts 0–3):** read and clean the raw BirdNET detections, validate and cluster the recording sites, standardize site/date/species names against the official South American bird taxonomy, and organize everything into the detection and effort arrays that the model needs.
+**Stage 1 — Data preparation (Jost):** read and clean the raw BirdNET detections, validate and cluster the recording sites, standardize site/date/species names against the official South American bird taxonomy, and organize everything into the detection and effort arrays that the model needs.
 
-**Stage 2 — Hierarchical model** format the arrays as binary detection data, specify and run the JAGS multi-species dynamic occupancy model, and check its goodness of fit.
+**Stage 2 — Hierarchical model (Jost, Ferraz)** format the arrays as binary detection data, specify and run the JAGS multi-species dynamic occupancy model, and check its goodness of fit.
 
-**Stage 3 — Analysis & reporting (mine, scripts 6b, 8–11):** take the model's posterior chains and turn them into interpretable results — parameter estimates, temporal-trend tables, species-richness figures, and effect measures comparing forest types and engines.
+**Stage 3 — Analysis & reporting (Jost):** take the model's posterior chains and turn them into interpretable results — parameter estimates, temporal-trend tables, species-richness figures, and effect measures comparing forest types and engines.
 
 ## Result
 

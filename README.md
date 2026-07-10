@@ -2,7 +2,7 @@
 
 This project is composed by R scripts, functions and R Markdown / Quarto documents for the analysis of Amazon bird population dynamics, from raw BirdNET vocalization detections all the way to publication-ready trend tables and figures.
 
-As an undergraduate researcher (Statistics) at the [Ferraz Population Biology Lab (UFRGS)](http://ferrazlab.org/), I work on the data-preparation, analysis, interpretation and reporting stages of the project. The core Bayesian hierarchical occupancy models (scripts `4` to `7` in the `Scripts` folder) were written by a collaborator — **everything else in this repository is my authorship.**
+As an undergraduate researcher (Statistics) at the [Ferraz Population Biology Lab (UFRGS)](http://ferrazlab.org/), I work on the data-preparation, analysis, interpretation and reporting stages of the project. The core Bayesian hierarchical occupancy models (scripts `4` to `7` in the `Scripts` folder) were written by Dr. Gonçalo Ferraz — **everything else in this repository is my own work, developed under Ferraz's guidance.**
 
 The goal of the project is to describe how Amazon bird communities change over time and to compare **old growth (OG)** and **secondary forest (SF)**, using the outputs of a **Bayesian hierarchical multi-species dynamic occupancy model**. The model estimates, for each of the surveyed bird species, the probabilities of initial presence (ψ₁), persistence (φ), colonization (γ) and detection (pp), and lets us track how these change across five years (2010–2014). Two automated audio-processing engines are compared throughout: **BirdNET** (deep-learning based) and **PROTAX-Sound**.
 
@@ -12,7 +12,7 @@ The scripts are numbered to enforce the execution order. The pipeline goes from 
 
 **Stage 1 — Data preparation (mine, scripts 0–3):** read and clean the raw BirdNET detections, validate and cluster the recording sites, standardize site/date/species names against the official South American bird taxonomy, and organize everything into the detection and effort arrays that the model needs.
 
-**Stage 2 — Hierarchical model (collaborator's, scripts 4–7):** format the arrays as binary detection data, specify and run the JAGS multi-species dynamic occupancy model, and check its goodness of fit.
+**Stage 2 — Hierarchical model** format the arrays as binary detection data, specify and run the JAGS multi-species dynamic occupancy model, and check its goodness of fit.
 
 **Stage 3 — Analysis & reporting (mine, scripts 6b, 8–11):** take the model's posterior chains and turn them into interpretable results — parameter estimates, temporal-trend tables, species-richness figures, and effect measures comparing forest types and engines.
 
@@ -37,15 +37,15 @@ The scripts are numbered to enforce the execution order. The pipeline goes from 
 ## Files by folder
 
 ### Scripts
-The numbered analysis workflow. Scripts **4–7 are the collaborator's** hierarchical model; all others are mine.
+The numbered analysis workflow. Scripts **4–7 are the Ferraz et al's** hierarchical model; all others are mine.
 
 - **`0_ProjectSetupScript.R`**: sets up the project infrastructure — loads the `barracudar` utility functions, initializes the random seed and the logging system.
 - **`1_ReadBirdNETOutput.R`**: reads every BirdNET detection `.txt` file and aggregates them into a single RDS file (audio file name, detection begin/end time, species, confidence score). The detections come from recordings made between 2010 and 2014, which were processed by BirdNET between April and July 2025.
 - **`2_CheckSitesDates.R`**: validates the detection sites against the master site list, clusters sites by distance (110 m threshold, hierarchical clustering) and standardizes site and date names.
 - **`3_DataPreparation.R`**: transforms the cleaned detections into standardized 3D detection-count arrays (site group × date × species) and effort arrays (recording minutes, number of sites), reconciling species names with the SACC taxonomy.
-- **`4_FormatBinaryData.R`** *(collaborator)*: converts detection counts into the 4D binary presence/absence array used by the model.
-- **`5_WriteRunJAGSModel.R`** *(collaborator)*: specifies and runs the JAGS multi-species dynamic occupancy model (forest type × year interactions) via MCMC.
-- **`6_MakeGOFPlots.R`** / **`7_MakeGOFPlots.R`** *(collaborator)*: posterior predictive checks and goodness-of-fit diagnostics.
+- **`4_FormatBinaryData.R`** *(Ferraz)*: converts detection counts into the 4D binary presence/absence array used by the model.
+- **`5_WriteRunJAGSModel.R`** *(Ferraz)*: specifies and runs the JAGS multi-species dynamic occupancy model (forest type × year interactions) via MCMC.
+- **`6_MakeGOFPlots.R`** / **`7_MakeGOFPlots.R`** *(Ferraz)*: posterior predictive checks and goodness-of-fit diagnostics.
 - **`6_PrepSuppFig1.R`**: prepares the dynamic-parameter posteriors (φ, γ, pp, ψ) — community means and species-specific estimates with 95% credible intervals — for the supplementary figures.
 - **`8_MakeTrendTables.R`**: fits one linear regression per MCMC iteration to estimate the temporal trend (slope) of each parameter, and marks significance with `*` (50% credible interval excludes zero) or `**` (95% excludes zero).
 - **`9_Tab_trends_total.R`**: summarizes how many species show increasing vs. decreasing trends (with/without asterisks) per parameter and forest type, for both engines.
@@ -53,7 +53,7 @@ The numbered analysis workflow. Scripts **4–7 are the collaborator's** hierarc
 - **`11_OddsRatio.R`**: computes the ratio of decreasing to increasing species for each parameter, forest type and engine, in absolute and "extreme" (significant-only) versions.
 
 ### Functions
-Helper functions used across the analysis scripts:
+Helper functions used across the analysis scripts.  The `GetPsis` function and its variants were mostly written by Ferraz.
 
 - **`CleanSiteName.R`**: standardizes site-name capitalization.
 - **`NameFix.R`**: reconciles species names between the BirdNET detections and the official SACC taxonomy.

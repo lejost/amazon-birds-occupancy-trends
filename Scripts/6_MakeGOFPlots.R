@@ -3,69 +3,9 @@
 ## needs only "y", "dfrep1" and "eval"
 
 ################################################################################
-## First get y array using code from the model script
-Exc <- 1 # 1 for excluding and 0 for not excluding sites 
-         # that were only sampled in year 2
-
 ## Read
-load("/Users/gferraz/OneDrive/Projects/NSpsOccDynManaus/Analysis/NSODManaus_Marc/Data/NSODMaoUlisses.RData")
-# load("C:/Users/fabio/OneDrive/NSpsOccDynManaus/Analysis/NSODManaus_Marc/Data/NSODMaoUlisses.RData")
-## Create arguments and optionally clean sites that were only sampled in year 2:
-maxdy <- c(6,8,13,6,5)
-# get names of the first site of each group
-gnames<-rep("x",length(unique(groups)))
-for(i in 1:length(unique(groups))) {
-  gnames[i]<-shortSITES$Spot[min(which(unique(groups)[i]==groups))]
-}
-## Exclude group of unidentified species from family Psittacidae
-NDETSG <- NDETSG[,,-which(dimnames(NDETSG)[[3]]=="Fam_Psittacidae")]
-## If Exc == 1, exclude sites that were only sampled during the second year
-if(Exc==1) {
-  # get indices of sites (grouped sites) that were only sampled on year 2
-  check <- function(x) all(is.na(x))
-  only2 <- which(apply(DATSG[c(1:6,15:38),],MARGIN = 2,FUN = check))
-  keep <- c(1:214)[-only2]
-  gnames <- gnames[keep]
-  NDETSG <- NDETSG[keep,-c(13,14),]
-  EFFGsits <- EFFGsits[keep,-c(13,14)]
-  maxdy<-c(6,6,13,6,5)
-}
-nsites <- nrow(NDETSG)
-nsurveys <- max(maxdy)
-nyears <- length(maxdy)
-nspecies <- dim(NDETSG)[[3]]
-# preencher vetor secfor que informa quais grupos sao em
-# floresta secundaria (0 = floresta primaria, 1 = floresta secundaria)
-secfor <- rep(NA, nsites)
-for(i in 1:length(secfor)) {
-  secfor[i] <- shortSITES[which(shortSITES$Spot==gnames[i]),2]
-}
-## Create and fill "sampsize" (sample size):
-sampsize <- array(NA, dim = c(nsites, nsurveys, nyears))
-for(i in 1:nsites) {  # i
-  for (t in 1:nyears) { # t
-    if (t == 1) {
-      sampsize[i,1:maxdy[t],t] <- EFFGsits[i, 1:maxdy[t]]
-    } else {
-      sampsize[i,1:maxdy[t],t] <- EFFGsits[i, (sum(maxdy[1:(t-1)])+1):(sum(maxdy[1:(t-1)])+maxdy[t])] }
-  } # t
-} # i
-sampsize[which(is.na(sampsize))] <- 0
-## Turn "NDETSG" into "NDETBIN" (binary NDETSG)
-NDETBIN <- NDETSG
-NDETBIN[which(NDETBIN>0)] <- 1
-## Create and fill four-dimensional "NEWDATAY", which replaces "dat$y"
-## and includes one dimension for species
-NEWDATAY <- array(data = NA, dim = c(nsites, nsurveys, nyears, nspecies))
-for (s in 1:nspecies) { # s
-  for (t in 1:nyears) { # t
-    if (t == 1) {
-      NEWDATAY[, 1:maxdy[t], t, s] <- NDETBIN[, 1:maxdy[t], s]
-    } else {
-      NEWDATAY[, 1:maxdy[t], t, s] <- NDETBIN[,(sum(maxdy[1:(t-1)])+1):(sum(maxdy[1:(t-1)])+maxdy[t]), s] }
-  } # t
-} # s
-y <- NEWDATAY
+y <- readRDS("DataObjects/y.rds")
+output <- readRDS("Outputs/ManausMSOD_MCMCchains.rds")
 
 ################################################################################
 # get basic numbers from y
@@ -83,7 +23,7 @@ mean.dfrep1 <- output$mean$dfrep1
 # derive  necessary gof objects
 df1 <- apply(y,c(1,3,4),function(x)sum(x,na.rm=TRUE)) # missing the niter dim
 diff1 <- sweep(-dfrep1,2:4,-df1) # sweep subtracts, so we need the minus signs
-FTobs <- (sweep(-sqrt(eval),2:4,-df1))^2 # ERRADO! Falta a sqrt(df1)
+FTobs <- (sweep(-sqrt(eval), 2:4, -sqrt(df1)))^2
 FTrep <- (sqrt(dfrep1) - sqrt(eval))^2
 FTratio <- FTobs / (FTrep + 0.0001) 
 
@@ -97,21 +37,9 @@ diff2 <- sweep(-dfrep2,2:3,-df2)
 FTobs.tot <- apply(FTobs,1,sum)
 FTrep.tot <- apply(FTrep,1,sum)
 
-
-
-
-# test with objects from obtained directly from jags
-load("/Users/gferraz/OneDrive/Projects/NSpsOccDynManaus/Analysis/NSODManaus_Marc/Outputs from jags/output_NSODMao_Code16X_array_deadSerious.RData")
-load("C:/Users/fabio/OneDrive/NSpsOccDynManaus/Analysis/NSODManaus_Marc/Outputs from jags/output_NSODMao_Code16X_array_deadSerious.RData")
-
-output<-out16X
-FTobs.tot <- output$sims.list$FTobs.tot
-FTrep.tot <- output$sims.list$FTrep.tot
-mean.df1 <- output$mean$df1
 mean.dfrep1 <- output$mean$dfrep1
-mean.df2 <- output$mean$df2
-mean.dfrep2 <- output$mean$dfrep2
-mean.diff2 <- output$mean$diff2
+mean.dfrep2 <- apply(dfrep2,c(2,3),mean)
+mean.diff2 <- apply(diff2,c(2,3),mean)
 
 # ------------------------------------------------------------------------------
 # Make a PPC plot rightaway and compute a bayesian p-value
@@ -142,16 +70,21 @@ mean(FTobs.tot/FTrep.tot)
 # [1] 1.068086, instead of previous "[1] 1.13673" using "out16X"
 
 
-# Now we can plot the expected (under the 'ideal data') frequencies 
+
+
+
+
+
+# Now we can plot the expected (under the 'ideal data') frequencies
 # against the observed ones: for df1
-plot(mean.df1, mean.dfrep1, xlab = 'Actual data set', pch = 16, col = rgb(0,0,0,0.3),
+plot(df1, mean.dfrep1, xlab = 'Actual data set', pch = 16, col = rgb(0,0,0,0.3),
      ylab = "'Ideal' data sets", frame = FALSE, 
      main = 'Number of occasions detected (out of 13)\nper site, year and species')
 abline(0, 1)
 # That looks pretty good
 
 # Same for df2
-plot(mean.df2, mean.dfrep2, xlab = 'Actual data set', pch = 16, col = rgb(0,0,0,0.3),
+plot(df2, mean.dfrep2, xlab = 'Actual data set', pch = 16, col = rgb(0,0,0,0.3),
      ylab = "'Ideal' data sets", frame = FALSE, 
      main = 'Number of sites at which detected (out of 158)\nper species and year')
 abline(0, 1)

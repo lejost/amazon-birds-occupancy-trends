@@ -41,7 +41,7 @@ The scripts are numbered to enforce the execution order. The pipeline goes from 
 ## Files by folder
 
 ### Scripts
-The numbered analysis workflow. Scripts **4–7 are the Ferraz et al's** hierarchical model; all others are mine.
+The numbered analysis workflow. Scripts **4–6 are Ferraz et al.'s** hierarchical model; all others are mine.
 
 - **`0_ProjectSetupScript.R`**: sets up the project infrastructure — loads the `barracudar` utility functions, initializes the random seed and the logging system.
 - **`1_ReadBirdNETOutput.R`**: reads every BirdNET detection `.txt` file and aggregates them into a single RDS file (audio file name, detection begin/end time, species, confidence score). The detections come from recordings made between 2010 and 2014, which were processed by BirdNET between April and July 2025.
@@ -49,8 +49,8 @@ The numbered analysis workflow. Scripts **4–7 are the Ferraz et al's** hierarc
 - **`3_DataPreparation.R`**: transforms the cleaned detections into standardized 3D detection-count arrays (site group × date × species) and effort arrays (recording minutes, number of sites), reconciling species names with the SACC taxonomy.
 - **`4_FormatBinaryData.R`** *(Ferraz)*: converts detection counts into the 4D binary presence/absence array used by the model.
 - **`5_WriteRunJAGSModel.R`** *(Ferraz)*: specifies and runs the JAGS multi-species dynamic occupancy model (forest type × year interactions) via MCMC.
-- **`6_MakeGOFPlots.R`** / **`7_MakeGOFPlots.R`** *(Ferraz)*: posterior predictive checks and goodness-of-fit diagnostics.
-- **`6_PrepSuppFig1.R`**: prepares the dynamic-parameter posteriors (φ, γ, pp, ψ) — community means and species-specific estimates with 95% credible intervals — for the supplementary figures.
+- **`6_MakeGOFPlots.R`** *(Ferraz)*: posterior predictive checks and goodness-of-fit diagnostics.
+- **`7_PrepSuppFig1.R`**: prepares the dynamic-parameter posteriors (φ, γ, pp, ψ) — community means and species-specific estimates with 95% credible intervals — for the supplementary figures.
 - **`8_MakeTrendTables.R`**: fits one linear regression per MCMC iteration to estimate the temporal trend (slope) of each parameter, and marks significance with `*` (50% credible interval excludes zero) or `**` (95% excludes zero).
 - **`9_Tab_trends_total.R`**: summarizes how many species show increasing vs. decreasing trends (with/without asterisks) per parameter and forest type, for both engines.
 - **`10_PlotSumOfPsis.R`**: computes posterior species richness (sum of occupancy probabilities) per forest type per year with 95% credible intervals, and produces the comparison figure (BirdNET vs. PROTAX-Sound).

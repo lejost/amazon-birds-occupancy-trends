@@ -1,0 +1,164 @@
+---
+title: "Odds ratios and species-count tables"
+format:
+  docx:
+    reference-doc: TrendTable_formatted_ex.docx
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r setup}
+library(gt)
+
+# ---- load the two trend summary tables (BirdNET and PROTAX-Sound) ----
+BN <- readRDS("../Outputs/TabTrendsBirdNET.rds")
+MP <- readRDS("../Outputs/TabTrendsProtaxSound.rds")
+
+# ---- simple count ratio: n_neg / n_pos ----
+# NA when n_pos == 0 (undefined ratio).
+count_ratio <- function(neg, pos){
+  ifelse(pos == 0 | is.na(pos) | is.na(neg), NA_real_, neg / pos)
+}
+
+make_or_df <- function(tb){
+  data.frame(
+    Parameter   = tb$Parameter,
+    Forest_type = tb$Forest_type,
+    OR_abs = count_ratio(tb$Total_neg, tb$Total_pos),
+    OR_ext = count_ratio(tb$neg_one_ast + tb$neg_two_ast,
+                         tb$pos_one_ast + tb$pos_two_ast)
+  )
+}
+
+or_BN <- make_or_df(BN)
+or_MP <- make_or_df(MP)
+
+param_order <- c("phi","gamma","psi","pp")
+reorder_rows <- function(df){
+  df <- df[order(match(df$Parameter, param_order), df$Forest_type), ]
+  rownames(df) <- NULL
+  df
+}
+or_BN <- reorder_rows(or_BN)
+or_MP <- reorder_rows(or_MP)
+
+# Greek symbols for parameter names
+param_labels <- c(phi = "\u03C6", gamma = "\u03B3", psi = "\u03C8", pp = "pp")
+
+# ---- Table 1 : odds ratios ----
+tab1 <- data.frame(
+  Parameter = param_labels[param_order],
+  MP_OG_abs = or_MP$OR_abs[or_MP$Forest_type == "OG"],
+  MP_SF_abs = or_MP$OR_abs[or_MP$Forest_type == "SF"],
+  BN_OG_abs = or_BN$OR_abs[or_BN$Forest_type == "OG"],
+  BN_SF_abs = or_BN$OR_abs[or_BN$Forest_type == "SF"],
+  MP_OG_ext = or_MP$OR_ext[or_MP$Forest_type == "OG"],
+  MP_SF_ext = or_MP$OR_ext[or_MP$Forest_type == "SF"],
+  BN_OG_ext = or_BN$OR_ext[or_BN$Forest_type == "OG"],
+  BN_SF_ext = or_BN$OR_ext[or_BN$Forest_type == "SF"]
+)
+
+# ---- Table 2 : absolute counts ----
+mk_counts <- function(bn, mp, ext = FALSE){
+  reord <- function(df) df[order(match(df$Parameter, param_order), df$Forest_type), ]
+  bn <- reord(bn); mp <- reord(mp)
+  if(ext){
+    pos <- function(df, ft) (df$pos_one_ast + df$pos_two_ast)[df$Forest_type == ft]
+    neg <- function(df, ft) (df$neg_one_ast + df$neg_two_ast)[df$Forest_type == ft]
+  } else {
+    pos <- function(df, ft) df$Total_pos[df$Forest_type == ft]
+    neg <- function(df, ft) df$Total_neg[df$Forest_type == ft]
+  }
+  data.frame(
+    Parameter = param_labels[param_order],
+    MP_OG_pos = pos(mp, "OG"), MP_OG_neg = neg(mp, "OG"),
+    MP_SF_pos = pos(mp, "SF"), MP_SF_neg = neg(mp, "SF"),
+    BN_OG_pos = pos(bn, "OG"), BN_OG_neg = neg(bn, "OG"),
+    BN_SF_pos = pos(bn, "SF"), BN_SF_neg = neg(bn, "SF")
+  )
+}
+tab2 <- mk_counts(BN, MP, ext = FALSE)
+tab3 <- mk_counts(BN, MP, ext = TRUE)
+```
+
+**Table 1. Ratio of decreasing to increasing species.** Ratio of the number of species with decreasing over increasing linear trend over time, for the four parameters listed, according to both audio-processing engines, in old growth (OG) and secondary forest (SF).
+
+```{r tab1}
+gt(tab1) |>
+  tab_spanner(label = "Absolute change",
+              columns = c(MP_OG_abs, MP_SF_abs, BN_OG_abs, BN_SF_abs)) |>
+  tab_spanner(label = "Extreme change",
+              columns = c(MP_OG_ext, MP_SF_ext, BN_OG_ext, BN_SF_ext)) |>
+  tab_spanner(label = "Protax-Sound",
+              columns = c(MP_OG_abs, MP_SF_abs), id = "ps_abs") |>
+  tab_spanner(label = "BirdNET",
+              columns = c(BN_OG_abs, BN_SF_abs), id = "bn_abs") |>
+  tab_spanner(label = "Protax-Sound",
+              columns = c(MP_OG_ext, MP_SF_ext), id = "ps_ext") |>
+  tab_spanner(label = "BirdNET",
+              columns = c(BN_OG_ext, BN_SF_ext), id = "bn_ext") |>
+  cols_label(
+    Parameter  = "",
+    MP_OG_abs = "OG", MP_SF_abs = "SF",
+    BN_OG_abs = "OG", BN_SF_abs = "SF",
+    MP_OG_ext = "OG", MP_SF_ext = "SF",
+    BN_OG_ext = "OG", BN_SF_ext = "SF"
+  ) |>
+  fmt_number(columns = -Parameter, decimals = 2) |>
+  sub_missing(columns = -Parameter, missing_text = "\u2014") |>
+  cols_align("center", columns = -Parameter) |>
+  tab_options(table.font.size = 10,
+              table.font.names = "Times New Roman")
+```
+
+**Table 2. Absolute change.** Number of species with increasing (+) or decreasing (-) linear trend over time for the four parameters listed, according to both audio-processing engines, in old growth (OG) and in secondary forest (SF). Species with estimated temporal trend of zero appear in the "+" column.
+
+```{r tab2}
+gt(tab2) |>
+  tab_spanner(label = "Protax-Sound",
+              columns = c(MP_OG_pos, MP_OG_neg, MP_SF_pos, MP_SF_neg)) |>
+  tab_spanner(label = "BirdNET",
+              columns = c(BN_OG_pos, BN_OG_neg, BN_SF_pos, BN_SF_neg)) |>
+  tab_spanner(label = "OG", columns = c(MP_OG_pos, MP_OG_neg), id = "mp_og2") |>
+  tab_spanner(label = "SF", columns = c(MP_SF_pos, MP_SF_neg), id = "mp_sf2") |>
+  tab_spanner(label = "OG", columns = c(BN_OG_pos, BN_OG_neg), id = "bn_og2") |>
+  tab_spanner(label = "SF", columns = c(BN_SF_pos, BN_SF_neg), id = "bn_sf2") |>
+  cols_label(
+    Parameter = "",
+    MP_OG_pos = "+", MP_OG_neg = "-",
+    MP_SF_pos = "+", MP_SF_neg = "-",
+    BN_OG_pos = "+", BN_OG_neg = "-",
+    BN_SF_pos = "+", BN_SF_neg = "-"
+  ) |>
+  cols_align("center", columns = -Parameter) |>
+  tab_options(table.font.size = 10,
+              table.font.names = "Times New Roman")
+```
+
+**Table 3. Extreme change.** Number of species with an "extreme" increasing (+) or decreasing (-) linear trend over time, i.e. species whose 50% or 95% credible intervals of the slope distribution do not overlap zero (one or two asterisks in the trend tables).
+
+```{r tab3}
+gt(tab3) |>
+  tab_spanner(label = "Protax-Sound",
+              columns = c(MP_OG_pos, MP_OG_neg, MP_SF_pos, MP_SF_neg)) |>
+  tab_spanner(label = "BirdNET",
+              columns = c(BN_OG_pos, BN_OG_neg, BN_SF_pos, BN_SF_neg)) |>
+  tab_spanner(label = "OG", columns = c(MP_OG_pos, MP_OG_neg), id = "mp_og3") |>
+  tab_spanner(label = "SF", columns = c(MP_SF_pos, MP_SF_neg), id = "mp_sf3") |>
+  tab_spanner(label = "OG", columns = c(BN_OG_pos, BN_OG_neg), id = "bn_og3") |>
+  tab_spanner(label = "SF", columns = c(BN_SF_pos, BN_SF_neg), id = "bn_sf3") |>
+  cols_label(
+    Parameter = "",
+    MP_OG_pos = "+", MP_OG_neg = "-",
+    MP_SF_pos = "+", MP_SF_neg = "-",
+    BN_OG_pos = "+", BN_OG_neg = "-",
+    BN_SF_pos = "+", BN_SF_neg = "-"
+  ) |>
+  cols_align("center", columns = -Parameter) |>
+  tab_options(table.font.size = 10,
+              table.font.names = "Times New Roman")
+```
+
+*Note: the sum of species in OG or SF for a given parameter does not add up to the total number of species because species without "extreme" trends (no asterisk) are not represented in this table.*

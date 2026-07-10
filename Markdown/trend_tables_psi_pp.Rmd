@@ -1,0 +1,277 @@
+---
+title: "Table of trend estimatives from 'output_NSODMao_Code15.rds' - psi & pp"
+output: word_document
+---
+
+```{r setup, include=FALSE, echo=FALSE}
+library(flextable) # editable word table
+use_df_printer()
+set_flextable_defaults(
+  font.size = 10,
+  font.family = "Times New Roman",
+  theme_fun = "theme_box")
+```
+
+#### Fit one linear regression for each MCMC and look at the posterior distribution of the beta parameter in the linear regression
+
+## Cross-species values (OG and SF)
+
+```{r arguments, echo=FALSE}
+## Call workspace
+output <- readRDS("../Outputs/ManausMSOD_MCMCchains.rds")
+compdata <- readRDS("../Utils/compdata.rds")
+
+## Create arguments
+years <- c(1:dim(output$sims.list$mean.alpha.lpp.year)[2])
+nyears <- length(years)
+nsps <-  length(output$mean$alpha.lpsi1)
+niter <- nrow(output$sims.list$beta.lphi.sf)
+
+# matrix with coefficients of temporal variation in 
+# psi and pp for both OG and SF 
+# for all-species mean (mu) and for each species:
+# (tabtrend has nsps+1 rows because the first row is 
+# for cross-sps values)
+tabtrend <- matrix(NA, nsps+1, 5)
+colnames(tabtrend) <- c("Species group and name", 
+                        "psi OG", "pp OG",
+                        "psi SF", "pp SF")
+tabtrend[,1] <- c("All-species (intercept)", compdata$SACCspacenames)
+# note: "tabtrend" has species names in its own column, instead of
+# having them as row names for a better knitting from Rmd file
+```
+
+```{r analysis, echo=FALSE}
+
+## Run analysis
+
+## psi & pp for OG and SF sites
+## values computed once for the cross-species level
+## and once for each species
+
+# ------------------------------------------------------------------------------
+# cross-species psi OG
+csps.psiog <- matrix(NA,niter,nyears)
+csps.psiog[,1] <- plogis(output$sims.list$mu.alpha.lpsi1)
+
+# required csps.lphiog and csps.lgammaog for psi
+csps.lphiog <- output$sims.list$mu.alpha.lphi.year # logit space yearly mean phi
+csps.lgammaog <- output$sims.list$mu.alpha.lgamma.year
+
+for (t in 2:nyears) {
+  csps.psiog[,t] <- csps.psiog[,t-1] * plogis(csps.lphiog[,t-1]) + 
+    (1 - csps.psiog[,t-1]) * plogis(csps.lgammaog[,t-1])
+}
+cy <- log( csps.psiog / (1-csps.psiog) )
+betas<-rep(NA,niter)  
+for(i in 1:niter){
+  betas[i]<-lm(cy[i,]~c(1:5))$coefficients[2]  
+}
+tabtrend[1,2] <- round(mean(betas),digits=2)
+sdvalue = round(sd(betas),digits=2)
+quants <- quantile(betas,probs=c(0.025,0.25,0.75,0.975))             
+
+# "*" if 50% interval limits are both positive/negative
+# "**" if 95% interval limits are both positive/negative
+ast <- rep("*",(quants[2]>0 || quants[3]<0) + (quants[1]>0 || quants[4]<0))
+tabtrend[1,2] <- paste(tabtrend[1,2],
+                       "/",sdvalue,
+                       paste(ast[which(!is.na(ast[1]))],ast[which(!is.na(ast[length(ast)-1]))],sep=""),
+                       sep="")
+# ------------------------------------------------------------------------------
+# cross-species pp OG
+csps.lppog <- output$sims.list$mu.alpha.lpp.year
+cy <- csps.lppog
+betas<-rep(NA,niter)  
+for(i in 1:niter){
+  betas[i]<-lm(cy[i,]~c(1:5))$coefficients[2]  
+}
+tabtrend[1,3] <- round(mean(betas),digits=2)
+sdvalue = round(sd(betas),digits=2)
+quants <- quantile(betas,probs=c(0.025,0.25,0.75,0.975))                     
+
+# "*" if 50% interval limits are both positive/negative
+# "**" if 95% interval limits are both positive/negative
+ast <- rep("*",(quants[2]>0 || quants[3]<0) + (quants[1]>0 || quants[4]<0))
+tabtrend[1,3] <- paste(tabtrend[1,3],
+                       "/",sdvalue,
+                       paste(ast[which(!is.na(ast[1]))],ast[which(!is.na(ast[length(ast)-1]))],sep=""),
+                       sep="")
+# ------------------------------------------------------------------------------
+# cross-species psi SF
+csps.psisf <- matrix(NA,niter,nyears)
+csps.psisf[,1] <- plogis(output$sims.list$mu.alpha.lpsi1 + 
+                         output$sims.list$mu.beta.lpsi1.sf)
+
+# required lphi and lgamma SF
+csps.lphisf <- output$sims.list$mu.alpha.lphi.year + 
+               matrix(rep(output$sims.list$mu.beta.lphi.sf,4),ncol=4) +
+               cbind(rep(0,niter),output$sims.list$mu.alpha.lphi.sfXyear)
+csps.lgammasf <- output$sims.list$mu.alpha.lgamma.year + 
+                 matrix(rep(output$sims.list$mu.beta.lgamma.sf,4),ncol=4) +
+                 cbind(rep(0,niter),output$sims.list$mu.alpha.lgamma.sfXyear)
+
+for (t in 2:nyears) {
+  csps.psisf[,t] <- csps.psisf[,t-1] * plogis(csps.lphisf[,t-1]) +
+                    (1 - csps.psisf[,t-1]) * plogis(csps.lgammasf[,t-1]) # using                                                            values in probability space
+}
+
+cy <- log(csps.psiog / (1-csps.psiog))
+betas<-rep(NA,niter)
+
+for(i in 1:niter){
+  betas[i]<-lm(cy[i,]~c(1:5))$coefficients[2]  
+}
+
+tabtrend[1,4] <- round(mean(betas),digits=2)
+sdvalue = round(sd(betas),digits=2)
+quants <- quantile(betas,probs=c(0.025,0.25,0.75,0.975))             
+
+# "*" if 50% interval limits are both positive/negative
+# "**" if 95% interval limits are both positive/negative
+ast <- rep("*",(quants[2]>0 || quants[3]<0) + (quants[1]>0 || quants[4]<0))
+tabtrend[1,4] <- paste(tabtrend[1,4],
+                       "/",sdvalue,
+                       paste(ast[which(!is.na(ast[1]))],ast[which(!is.na(ast[length(ast)-1]))],sep=""),
+                       sep="")
+# ------------------------------------------------------------------------------
+# cross-species pp SF
+csps.lppsf <- output$sims.list$mu.alpha.lpp.year + 
+              matrix(rep(output$sims.list$mu.beta.lpp.sf,5),ncol=5) +
+              cbind(rep(0,niter),output$sims.list$mu.alpha.lpp.sfXyear)
+cy <- csps.lppsf
+betas<-rep(NA,niter)  
+for(i in 1:niter){
+  betas[i]<-lm(cy[i,]~c(1:5))$coefficients[2]  
+}
+tabtrend[1,5] <- round(mean(betas),digits=2)
+sdvalue = round(sd(betas),digits=2)
+quants <- quantile(betas,probs=c(0.025,0.25,0.75,0.975))                     
+
+# "*" if 50% interval limits are both positive/negative
+# "**" if 95% interval limits are both positive/negative
+ast <- rep("*",(quants[2]>0 || quants[3]<0) + (quants[1]>0 || quants[4]<0))
+tabtrend[1,5] <- paste(tabtrend[1,5],
+                       "/",sdvalue,
+                       paste(ast[which(!is.na(ast[1]))],ast[which(!is.na(ast[length(ast)-1]))],sep=""),
+                       sep="")
+# ==============================================================================
+## Species-specific psi and pp, OG and SF
+
+for (k in 1:nsps) {
+  # here we have added the "csn" index to generate a table in SACC species order
+  csn <- which(compdata$spacenames == compdata$SACCspacenames[k]) # current species                                                                     number
+                                                                  # (adjust output                                                                       sps order
+                                                                  #  to SACC sps                                                                         order)
+  
+  # notice that we're using the "k+1" row because the first row is being used for     cross-species values
+  
+  # ----------------------------------------------------------------------------
+  # species-specific psi OG
+  psiog <- matrix(NA,niter,nyears)
+  psiog[,1] <- plogis(output$sims.list$alpha.lpsi1[,csn])
+  lphiog <- output$sims.list$alpha.lphi.year[,,csn]
+  lgammaog <- output$sims.list$alpha.lgamma.year[,,csn]
+  
+  for (t in 2:nyears) {
+    psiog[,t] <- psiog[,t-1] * plogis(lphiog[,t-1]) +
+                 (1 - psiog[,t-1]) * plogis(lgammaog[,t-1])
+  }
+  cy <- log( psiog / (1-psiog) )
+  betas<-rep(NA,niter)  
+  for(i in 1:niter){
+    betas[i]<-lm(cy[i,]~c(1:5))$coefficients[2]  
+  }
+  tabtrend[k+1,2] <- round(mean(betas),digits=2)
+  sdvalue = round(sd(betas),digits=2)
+  quants <- quantile(betas,probs=c(0.025,0.25,0.75,0.975))             
+  
+  # "*" if 50% interval limits are both positive/negative
+  # "**" if 95% interval limits are both positive/negative
+  ast <- rep("*",(quants[2]>0 || quants[3]<0) + (quants[1]>0 || quants[4]<0))
+  tabtrend[k+1,2] <- paste(tabtrend[k+1,2],
+                         "/",sdvalue,
+                         paste(ast[which(!is.na(ast[1]))],ast[which(!is.na(ast[length(ast)-1]))],sep=""),
+                         sep="")
+  # ----------------------------------------------------------------------------
+  # species-specific pp OG
+  lppog <- output$sims.list$alpha.lpp.year[,,csn] # logit space yearly mean pp
+  cy <- lppog
+  betas<-rep(NA,niter)  
+  for(i in 1:niter){
+    betas[i]<-lm(cy[i,]~c(1:5))$coefficients[2]  
+  }
+  tabtrend[k+1,3] <- round(mean(betas),digits=2)
+  sdvalue = round(sd(betas),digits=2)
+  quants <- quantile(betas,probs=c(0.025,0.25,0.75,0.975))
+  
+  # "*" if 50% interval limits are both positive/negative
+  # "**" if 95% interval limits are both positive/negative
+  ast <- rep("*",(quants[2]>0 || quants[3]<0) + (quants[1]>0 || quants[4]<0))
+  tabtrend[k+1,3] <- paste(tabtrend[k+1,3],
+                         "/",sdvalue,
+                         paste(ast[which(!is.na(ast[1]))],ast[which(!is.na(ast[length(ast)-1]))],sep=""),
+                         sep="")
+  
+  # ----------------------------------------------------------------------------
+  # species-specific psi SF
+  psisf <- matrix(NA,niter,nyears)
+  psisf[,1] <- plogis(output$sims.list$alpha.lpsi1[,csn] + 
+                      output$sims.list$beta.lpsi1.sf[,csn])
+  lphisf <- output$sims.list$alpha.lphi.year[,,csn] + 
+              matrix(rep(output$sims.list$beta.lphi.sf[,csn],4),ncol=4) +
+              output$sims.list$beta.lphi.sfXyear[,,csn]
+  lgammasf <- output$sims.list$alpha.lgamma.year[,,csn] + 
+              matrix(rep(output$sims.list$beta.lgamma.sf[,csn],4),ncol=4) +
+              output$sims.list$beta.lgamma.sfXyear[,,csn]
+  
+  for (t in 2:nyears) {
+    psisf[,t] <- psisf[,t-1] * plogis(lphisf[,t-1]) +
+                 (1 - psisf[,t-1]) * plogis(lgammasf[,t-1])
+  }
+  cy <- log( psisf / (1-psisf) )
+  betas<-rep(NA,niter)  
+  for(i in 1:niter){
+    betas[i]<-lm(cy[i,]~c(1:5))$coefficients[2]  
+  }
+  tabtrend[k+1,4] <- round(mean(betas),digits=2)
+  sdvalue = round(sd(betas),digits=2)
+  quants <- quantile(betas,probs=c(0.025,0.25,0.75,0.975))             
+  
+  # "*" if 50% interval limits are both positive/negative
+  # "**" if 95% interval limits are both positive/negative
+  ast <- rep("*",(quants[2]>0 || quants[3]<0) + (quants[1]>0 || quants[4]<0))
+  tabtrend[k+1,4] <- paste(tabtrend[k+1,4],
+                         "/",sdvalue,
+                         paste(ast[which(!is.na(ast[1]))],ast[which(!is.na(ast[length(ast)-1]))],sep=""),
+                         sep="")
+  # ----------------------------------------------------------------------------
+  # species-specific pp SF
+  lppsf <- output$sims.list$alpha.lpp.year[,,csn] + 
+           matrix(rep(output$sims.list$beta.lpp.sf[,csn],5),ncol=5) +
+           output$sims.list$beta.lpp.sfXyear[,,csn]
+  cy <- lppsf
+  betas<-rep(NA,niter)  
+  for(i in 1:niter){
+    betas[i]<-lm(cy[i,]~c(1:5))$coefficients[2]  
+  }
+  tabtrend[k+1,5] <- round(mean(betas),digits=2)
+  sdvalue = round(sd(betas),digits=2)
+  quants <- quantile(betas,probs=c(0.025,0.25,0.75,0.975))
+  
+  # "*" if 50% interval limits are both positive/negative
+  # "**" if 95% interval limits are both positive/negative
+  ast <- rep("*",(quants[2]>0 || quants[3]<0) + (quants[1]>0 || quants[4]<0))
+  tabtrend[k+1,5] <- paste(tabtrend[k+1,5],
+                         "/",sdvalue,
+                         paste(ast[which(!is.na(ast[1]))],ast[which(!is.na(ast[length(ast)-1]))],sep=""),
+                         sep="")
+  
+} # k
+
+# turning "tabtrend" into a data.frame to be converted in a table at
+# microsoft word by "flextable" package
+dftabtrend <- data.frame(tabtrend)
+dftabtrend <- flextable(dftabtrend)
+dftabtrend
+```

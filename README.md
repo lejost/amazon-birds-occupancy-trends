@@ -20,17 +20,15 @@ The scripts are numbered to enforce the execution order. The pipeline goes from 
 
 **Stage 2 — Hierarchical model (Jost, Ferraz)** format the arrays as binary detection data, specify and run the JAGS multi-species dynamic occupancy model, and check its goodness of fit.
 
-**Stage 3 — Analysis & reporting (Jost):** take the model's posterior chains and turn them into interpretable results — parameter estimates, temporal-trend tables, species-richness figures, and effect measures comparing forest types and engines.
+**Stage 3 — Analysis & reporting (Jost):** take the model's posterior chains and turn them into interpretable results — parameter estimates, temporal-trend tables, and species-richness figures comparing forest types and engines.
 
 ## Result
 
 - A reproducible pipeline that starts from raw BirdNET output and produces the tables and figures used in the manuscript, with intermediate objects (`.rds` / `.RData`) saved at each step so any stage can be re-run on its own.
 - Species-richness figures and temporal-trend tables comparing OG vs SF forests across two audio-processing engines (BirdNET and PROTAX-Sound).
-- A critical review of the effect-size calculation: the original odds-ratio function, applied to two complementary categories of the same sample (species increasing vs. decreasing), reduces algebraically to the square of a simple count ratio, so it does not behave as a real odds ratio. It was replaced by the directly interpretable count ratio `n₋/n₊`.
 
 ## Future updates
 
-- Reformulate the forest-type comparison as a proper OG-vs-SF odds ratio, so the effect measure carries real statistical meaning.
 - Finalize the Quarto table formatting to fully match the target journal template.
 
 ## Communication & dissemination
